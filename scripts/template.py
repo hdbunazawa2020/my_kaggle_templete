@@ -29,7 +29,7 @@ import utils
 from utils.data import *
 
 from datetime import datetime
-date = datetime.strptime("20241116", "%Y%m%d").date().strftime("%Y%m%d")
+date = datetime.datetime.now().strftime("%Y%m%d")
 print(f"TODAY is {date}")
 
 # ===================================
