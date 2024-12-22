@@ -29,11 +29,16 @@ import utils
 from utils.data import *
 
 from datetime import datetime
-date = datetime.datetime.now().strftime("%Y%m%d")
+date = datetime.now().strftime("%Y%m%d")
 print(f"TODAY is {date}")
 
 # ===================================
 # utils
+# ===================================
+
+
+# ===================================
+# main
 # ===================================
 # TODO: config_pathをこのスクリプトからの相対パスにする
 @hydra.main(version_base=None, config_path="../conf", config_name="config.yaml")
