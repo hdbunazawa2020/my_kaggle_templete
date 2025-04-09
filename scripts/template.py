@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, StratifiedKFold, train_test_split
 from sklearn.metrics import mean_squared_error
@@ -61,10 +61,19 @@ def main(cfg: DictConfig) -> None:
     # make savedir
     savedir = output_dir / exp
     os.makedirs(savedir, exist_ok=True)
+    os.makedirs(savedir / "yaml", exist_ok=True)
 
     # ==================
     # Save file
     # ==================
+    # -- 必要なファイル保存 --
+
+    # YAMLとして保存
+    output_path = Path(savedir/"yaml"/"config.yaml")
+    with open(output_path, "w") as f:
+        OmegaConf.save(config=cfg, f=f.name)
+    print(f"Config saved to {output_path.resolve()}")
+
 
 if __name__ == "__main__":
     main()
