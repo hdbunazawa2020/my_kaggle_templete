@@ -55,7 +55,7 @@ def main(cfg: DictConfig) -> None:
     exp = config["exp"]
     debug = config["debug"]
     if debug:
-        exp = "xxx_debug" # TODO: ファイルの連番を入れる
+        exp = "000_filename__debug" # TODO: ファイルの連番を入れる
     # set config
 
     # make savedir
@@ -71,7 +71,7 @@ def main(cfg: DictConfig) -> None:
     # YAMLとして保存
     output_path = Path(savedir/"yaml"/"config.yaml")
     with open(output_path, "w") as f:
-        OmegaConf.save(config=cfg, f=f.name)
+        OmegaConf.save(config=config, f=f.name)
     print(f"Config saved to {output_path.resolve()}")
 
 
