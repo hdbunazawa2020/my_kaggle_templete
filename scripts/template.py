@@ -1,4 +1,5 @@
-import os, gc, glob, pickle, warnings
+import os, gc, re, yaml, glob, pickle, warnings
+import time
 import random, math
 import joblib, pickle, itertools
 from pathlib import Path
@@ -14,6 +15,7 @@ import seaborn as sns
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
+from types import SimpleNamespace
 
 from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, StratifiedKFold, train_test_split
 from sklearn.metrics import mean_squared_error
@@ -26,16 +28,12 @@ import warnings
 import sys
 sys.path.append(r"..")
 import utils
-from utils.data import *
+from utils.data import sep, show_df, glob_walk, set_seed, format_time, save_config_yaml, dict_to_namespace
+from utils.wandb_utils import set_wandb, safe_wandb_config
 
 from datetime import datetime
 date = datetime.now().strftime("%Y%m%d")
 print(f"TODAY is {date}")
-
-# ===================================
-# utils
-# ===================================
-
 
 # ===================================
 # main
@@ -50,29 +48,31 @@ def main(cfg: DictConfig) -> None:
     # from config
     input_dir  = Path(cfg["input_dir"])
     output_dir = Path(cfg["output_dir"])
-    # get config of this file
-    config = cfg["template"]
-    exp = config["exp"]
-    debug = config["debug"]
-    if debug:
-        exp = "000_filename__debug" # TODO: ファイルの連番を入れる
     # set config
-
+    config_dict = OmegaConf.to_container(cfg["xxx_filename"], resolve=True)
+    config = dict_to_namespace(config_dict)
+    # when debug
+    if config.debug:
+        exp = "xxx_debug" # TODO: ファイルの連番を入れる
+    # set WandB
+    if config.use_wandb:
+        set_wandb(config)
     # make savedir
     savedir = output_dir / exp
     os.makedirs(savedir, exist_ok=True)
+    os.makedirs(savedir / "oof", exist_ok=True)
     os.makedirs(savedir / "yaml", exist_ok=True)
-
-    # ==================
-    # Save file
-    # ==================
-    # -- 必要なファイル保存 --
+    os.makedirs(savedir / "model", exist_ok=True)
 
     # YAMLとして保存
     output_path = Path(savedir/"yaml"/"config.yaml")
-    with open(output_path, "w") as f:
-        OmegaConf.save(config=config, f=f.name)
+    save_config_yaml(config, output_path)
     print(f"Config saved to {output_path.resolve()}")
+
+    # ==================
+    # main
+    # ==================
+    
 
 
 if __name__ == "__main__":
