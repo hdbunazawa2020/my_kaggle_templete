@@ -13,6 +13,8 @@
 **.tfevents
 *.txt
 *.parquet
+*.pt
+*.pickle
 
 # directories
 /.virtual_documents

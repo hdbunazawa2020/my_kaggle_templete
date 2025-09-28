@@ -45,20 +45,17 @@ def main(cfg: DictConfig) -> None:
     Args:
         cfg (DictConf): config
     """
-    # from config
-    input_dir  = Path(cfg["input_dir"])
-    output_dir = Path(cfg["output_dir"])
     # set config
     config_dict = OmegaConf.to_container(cfg["xxx_filename"], resolve=True)
     config = dict_to_namespace(config_dict)
     # when debug
     if config.debug:
-        exp = "xxx_debug" # TODO: ファイルの連番を入れる
+        config.exp = "xxx_debug" # TODO: ファイルの連番を入れる
     # set WandB
     if config.use_wandb:
         set_wandb(config)
     # make savedir
-    savedir = output_dir / exp
+    savedir = Path(config.output_dir) / config.exp
     os.makedirs(savedir, exist_ok=True)
     os.makedirs(savedir / "oof", exist_ok=True)
     os.makedirs(savedir / "yaml", exist_ok=True)
