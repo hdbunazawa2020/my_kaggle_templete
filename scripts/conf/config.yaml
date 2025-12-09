@@ -1,4 +1,2 @@
 defaults:
 - _self_
-input_dir: ../input/hogehoge/ # TODO: コンペの環境に合わせる
-output_dir: ../output/
