@@ -108,7 +108,17 @@ ${WORKSPACE_ROOT}/study/${PROJECT_NAME}/.venv/bin/python
 | `.claude/commands/*.md` | 9 個の slash command (`/register_experiment` 等) |
 | `.claude/skills/*/SKILL.md` | 6 個の auto-invoked skill (= cv-diagnosis, kaggle-experiment, ...) |
 | `.claude/settings.json` | 共通 safe permissions |
-| `docs/*.md` | 12+ 個の Claude 必読 doc 雛形 (COMPETITION/METRIC/CV/EXPERIMENTS/AUTOMATION 等) |
+| `docs/*.md` | Claude 必読 doc 雛形 (COMPETITION/METRIC/CV/EXPERIMENTS/AUTOMATION 等) |
+| `docs/LESSONS_FROM_PAST_COMPS.md` | ⭐ **過去コンペ横断の教訓**（BirdCLEF+ / ROGII / RSNA Knee の実証つき） |
+| `docs/WEAK_LABEL_PLAYBOOK.md` | 弱ラベル / 導出ラベルコンペの戦い方（ラベル品質がモデルを上回る件） |
+| `docs/VALIDATION_PITFALLS.md` | 検証設計の落とし穴（数値つき） |
+| `docs/ENSEMBLE.md` | アンサンブル規律（固定重み > 重み探索） |
+| `docs/COMPETITION_START_CHECKLIST.md` | 開始〜1週目にやることのチェックリスト |
+| `infra/k8s/` | GPUクラスタ（k8s + Kueue）でジョブを回す場合の資産 |
+| `src/scripts/300_submission/` | Code Competition の提出パイプライン（事故防止機構つき） |
+
+> 📚 **過去コンペの蓄積は `docs/LESSONS_FROM_PAST_COMPS.md` に集約**している。
+> 新コンペで最初に読むべきはこれ。**眺めるだけでは効かないので、§0 の 4 つを自分のコンペの言葉で埋める**。
 
 ### コンペ開始時にやること (= Claude が実力発揮する条件)
 1. `docs/COMPETITION.md` を埋める (= competition の overview / runtime 制約 / hardware)
@@ -132,11 +142,13 @@ ${WORKSPACE_ROOT}/study/${PROJECT_NAME}/.venv/bin/python
 │   ├── commands/       (9 個)
 │   ├── skills/         (6 個 + kaggle_base.md)
 │   └── settings.json
-├── docs/               (14 個雛形)
+├── docs/               (雛形 + 過去コンペの知識 docs)
 ├── configs/            (Hydra global config)
+├── infra/k8s/          (= GPUクラスタで回す場合のみ。単一サーバーなら不要)
 ├── src/
 │   ├── datasets/ models/ training/ inference/ utils/
 │   └── scripts/<id>_<name>/
+│       └── 300_submission/   (= Code Competition 提出パイプライン)
 ├── data/
 │   ├── raw/            (= 競技 file、 触らない)
 │   ├── processed/<ver>/

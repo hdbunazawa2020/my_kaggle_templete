@@ -1,0 +1,67 @@
+# =============================================================================
+# submission_config.yaml — Code Competition 提出パイプラインのコンペ固有設定
+# =============================================================================
+# ⚠ **`{{...}}` が 1 つでも残っていると config.py が hard fail する。**
+#   「埋め忘れたまま提出枠を消費する」事故を防ぐため、意図的にそうしている。
+# =============================================================================
+
+# --- Kaggle 側の識別子 ---------------------------------------------------------
+competition: "{{COMPETITION_SLUG}}"        # 例: rsna-knee-abnormality-detection
+kaggle_owner: "{{KAGGLE_USERNAME}}"        # 例: hidebu
+kernel_slug: "{{KERNEL_SLUG}}"             # 例: myco-infer（slot を付けると -a / -b が生える）
+kernel_title: "{{KERNEL_TITLE}}"           # 例: MyCompetition infer
+dataset_slug_prefix: "{{DATASET_PREFIX}}"  # 例: myco-arm（stage_arm.py が -<exp> を足す）
+submission_file: "submission.csv"          # notebook が出力するファイル名
+
+# --- kernel の生成 ---------------------------------------------------------------
+kernel:
+  # ⚠ **`.py` が正本で `.ipynb` は生成物**。.ipynb を直接編集しない（build_kernel.py 参照）
+  source: "src/scripts/300_submission/kernel/inference_template.py"
+  out_root: "src/scripts/300_submission"     # kernel{-slot}/ がこの下に作られる
+  enable_gpu: true
+  enable_internet: false                      # Code Competition は通常ネット遮断
+  machine: "NvidiaTeslaT4"                    # "None" / "NvidiaTeslaT4" / "NvidiaTeslaP100" など
+  is_private: true
+  # 常に attach する dataset（コード配布用など）。weights の dataset は stage_arm.py が足す
+  base_dataset_sources:
+    - "{{KAGGLE_USERNAME}}/{{SRC_DATASET_SLUG}}"
+
+# --- 前処理仕様の自動導出（★ 事故防止の中核）-----------------------------------------
+# 学習時の前処理バージョンを実験 config から読み、kernel の定数へ**自動で**流し込む。
+# CLI で明示した値と食い違ったら **既定で hard fail** する。
+#
+# ⚠ なぜこれが要るか（RSNA の実例）:
+#   cache 仕様を指定せずに kernel を作り、24 枚・span 0.15-0.85 で学習した arm を
+#   **16 枚・span 0-1 で推論する kernel** を提出してしまった。LB は 0.946（約 −0.005）。
+#   エラーは一切出ない。**黙って別物が走る**のが最悪の壊れ方なので、ここで止める。
+preproc:
+  config_key: "{{PREPROC_VERSION_KEY}}"   # 実験 config.yaml 内のキー名。例: cache_ver
+  # バージョン -> kernel に注入する定数（キー名は kernel 側の定数名と一致させる）
+  specs:
+    "{{PREPROC_VERSION}}":                # 例: c008
+      N_SLICES: 24
+      CACHE_SPAN: "(0.15, 0.85)"
+      CACHE_SLAB_MM: 3.0
+  # kernel 側で再現できない前処理はここに理由付きで書く（選ばれたら即 exit）
+  unsupported: {}
+  #   例: "c011": "敷き詰め厚板（slab_mm=-1）は kernel 未対応"
+
+# --- infer_meta.json に運ぶ項目 ------------------------------------------------------
+# ⚠ **ckpt に入らない設定は必ずここに並べる**。並べ忘れると kernel は違う形のモデルを組み、
+#   しかも load_state_dict が missing/unexpected ゼロで通ってしまう（= 無言で別モデル）。
+#   RSNA では persistent=False の buffer がこれに該当して実際に事故った。
+meta_fields:
+  - "model.backbone"
+  - "model.img_size"
+  # - "model.n_heads"
+
+# --- 提出説明文の禁止語 ---------------------------------------------------------------
+# Kaggle 側に残る submission description から、外部データや公開 notebook の使用が
+# 読み取れる記述を禁止する。desc には **自分の arm 名と blend 比だけ**を書く。
+banned_desc_words:
+  - "public"
+  - "external"
+  - "外部"
+  - "公開"
+  - "discussion"
+  # - "<使った公開 notebook の作者名>"

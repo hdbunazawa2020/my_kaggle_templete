@@ -19,16 +19,36 @@ Claude should behave like a disciplined Kaggle research engineer:
 Always read these before proposing changes:
 
 1. `AGENTS.md`
-2. `docs/COMPETITION.md`
-3. `docs/DATASET.md`
-4. `docs/METRIC.md`
-5. `docs/EXPERIMENTS.md`
-6. `docs/AUTOMATION.md`
+2. **`docs/LESSONS_FROM_PAST_COMPS.md`** ← ⭐ 過去コンペ（BirdCLEF+ / ROGII / RSNA Knee）の横断教訓。最初に効く規律
+3. `docs/COMPETITION.md`
+4. `docs/DATASET.md`
+5. `docs/METRIC.md`
+6. `docs/EXPERIMENTS.md`
+7. `docs/AUTOMATION.md`
 
-If the task is baseline-related, also read:
-- `docs/BASELINE.md`
-- `docs/SOLUTION.md`
-- `docs/SUBMISSION.md`
+タスク別に追加で読むもの:
+
+| タスク | 追加で読む |
+|---|---|
+| baseline 構築 | `docs/BASELINE.md` / `docs/SOLUTION.md` / `docs/SUBMISSION.md` |
+| コンペ開始直後 | `docs/COMPETITION_START_CHECKLIST.md` |
+| CV 設計 / CV-LB 乖離の診断 | `docs/VALIDATION_PITFALLS.md` / `docs/CV.md` |
+| **ラベルが導出物（弱ラベル）** | **`docs/WEAK_LABEL_PLAYBOOK.md`** |
+| アンサンブル / 最終選択 | `docs/ENSEMBLE.md` |
+| 提出 kernel の作成 | `docs/SUBMISSION.md` / `src/scripts/300_submission/README.md` |
+
+## Hard-won principles (= 過去コンペで代償を払って得たもの)
+
+実戦で順位に効いた順。詳細と証拠は `docs/LESSONS_FROM_PAST_COMPS.md`。
+
+1. **ラベルが導出物なら、ラベル品質が最大の投資先。**
+   RSNA ではモデル側を一切変えずラベル源を差し替えただけで Private +0.013（アンサンブル全体を上回った）。
+2. **public LB で最終を選ばない。** 表示桁の差（3桁丸め）を選択根拠にしない。
+3. **小標本の参照集合で「選抜」しない。** 診断には使ってよい。複数チームが独立に悪化を実証している。
+4. **1 実験 1 仮説・1-key-diff。** 比べたい 2 本の間で、metric の物差しが同じかを数字の解釈前に確認する。
+5. **判断（GO / NO-GO / CLOSE / HOLD）を書いたら、その瞬間に git 追跡対象へ置く。**
+   scratch に置いた結論は失われ、振り返りで誤った総括を生む。
+6. **固定重み > 重み探索。** 多様性は本数ではなく「見ている場所・ラベル源の毛色」で作る。
 
 ## Working rules
 

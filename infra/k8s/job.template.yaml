@@ -1,0 +1,124 @@
+# =============================================================================
+# job.template.yaml — GPU Job の汎用テンプレート
+# =============================================================================
+# ⚠ このファイルを直接 `kubectl apply` しない。`%%TOKEN%%` はプレースホルダで、
+#   投入は必ず submit.sh 経由で行う:
+#
+#     ./infra/k8s/submit.sh run <ngpu> "<command>"
+#
+# generateName を使うので何度でも同時に投入できる（毎回ユニークな名前になる）。
+#
+# ## 設計の前提
+# - repo と data は共有 PVC の上にある。Job も同じ PVC をマウントするので
+#   **repo / data / venv がそのまま見える**（image にコードを焼かない）。
+# - 秘密情報は image にも YAML にも入れない。起動時に repo root の `.env` を source する。
+# - コマンドは base64 で渡す。パイプ・クォート・`&` が含まれても YAML/sed が壊れない。
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: %%JOB_PREFIX%%-%%JOBNAME%%-
+  namespace: %%NAMESPACE%%
+  labels:
+    app: "%%APP_LABEL%%"
+    job: "%%JOBNAME%%"
+    # Kueue を使わないクラスタでは submit.sh がこの行を落とす
+    kueue.x-k8s.io/queue-name: "%%QUEUE_NAME%%"
+spec:
+  backoffLimit: 0                   # 1 回試行（失敗を黙って再実行させない＝原因が埋もれる）
+  ttlSecondsAfterFinished: 259200   # 3 日後に自動削除
+  template:
+    metadata:
+      labels:
+        app: "%%APP_LABEL%%"
+        job: "%%JOBNAME%%"
+    spec:
+      restartPolicy: Never
+      # ⚠ public image は既定 root。開発 Pod と同じ uid/gid で動かさないと
+      #   共有ストレージに root 所有のファイルが生まれて、あとから触れなくなる。
+      securityContext:
+        runAsUser: %%UID%%
+        runAsGroup: %%GID%%
+        fsGroup: %%FSGROUP%%
+      tolerations:
+        - key: "%%GPU_TAINT_KEY%%"
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: run
+          image: "%%IMAGE%%"
+          workingDir: %%PROJECT_DIR%%
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              cd %%PROJECT_DIR%%
+              set -a; [ -f .env ] && . ./.env; set +a
+              export TMPDIR=/dev/shm        # ⚠ NFS 上の tmp だと worker 終了時に大量エラーが出る
+              CMD="$(echo "$PAI_CMD_B64" | base64 -d)"
+              echo "===== JOB=%%JOBNAME%%  NGPU=%%NGPU%% ====="
+              echo "===== CMD: $CMD ====="
+              nvidia-smi || true            # GPU 0 枚の job には無いので落とさない
+              echo "whoami=$(id)  HOME=$HOME"
+              %%PY%% -c "import torch;print('torch',torch.__version__,'cuda',torch.cuda.is_available(),'ngpu',torch.cuda.device_count())"
+              echo "-------------------------------------------------------------"
+              bash -lc "$CMD"
+          env:
+            - name: PAI_CMD_B64
+              value: "%%CMD_B64%%"
+            - name: HOME                   # ⚠ 既定 /root だと PVC 上の uv/wandb 設定を見失う
+              value: "%%HOME%%"
+            # ⚠ public image の /etc/passwd に uid の登録が無いと getpass.getuser() が落ちる。
+            #   USER/LOGNAME は pwd より先に見られるので、env で与えれば回避できる。
+            - name: USER
+              value: "%%POD_USER%%"
+            - name: LOGNAME
+              value: "%%POD_USER%%"
+            # ⚠ 薄い base image には CA 証明書が無く HTTPS（HF Hub / W&B）が張れない。
+            #   venv 同梱の certifi を使わせる（Rust の reqwest も SSL_CERT_FILE を見る）。
+            - name: SSL_CERT_FILE
+              value: "%%CERT_FILE%%"
+            - name: REQUESTS_CA_BUNDLE
+              value: "%%CERT_FILE%%"
+            - name: CURL_CA_BUNDLE
+              value: "%%CERT_FILE%%"
+            - name: HF_HOME               # 事前学習重みを PVC にキャッシュ（再 DL を避ける）
+              value: "%%DATA_MOUNT%%/cache/huggingface"
+            # torch/triton のコンパイルキャッシュ。NFS に置くと遅くロック事故もあるので tmpfs へ
+            - name: TORCHINDUCTOR_CACHE_DIR
+              value: "/dev/shm/torchinductor"
+            - name: TRITON_CACHE_DIR
+              value: "/dev/shm/triton"
+            - name: WANDB_PROJECT
+              value: "%%WANDB_PROJECT%%"
+            - name: WANDB_ENTITY
+              value: "%%WANDB_ENTITY%%"
+            - name: NCCL_DEBUG
+              value: "WARN"
+          resources:
+            requests:
+              cpu: "%%CPU%%"
+              memory: %%MEM%%
+              nvidia.com/gpu: %%NGPU%%
+            limits:
+              cpu: "%%CPU%%"
+              memory: %%MEM%%
+              nvidia.com/gpu: %%NGPU%%
+          volumeMounts:
+            - name: data
+              mountPath: %%DATA_MOUNT%%
+            - name: home
+              mountPath: %%HOME_MOUNT%%
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: %%DATA_PVC%%
+        - name: home
+          persistentVolumeClaim:
+            claimName: %%HOME_PVC%%
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: %%SHM%%
